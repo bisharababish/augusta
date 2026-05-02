@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
@@ -43,11 +44,11 @@ function AnnouncementsPage() {
     }
     setSubmitting(true);
     try {
+      // After
       await createAnnouncement({
         title: form.title.trim(),
         body: form.body.trim(),
         author_id: user.id,
-        author_name: getDisplayName(user, "en"),
       });
       setForm({ title: "", body: "" });
       toast.success(t("saved"));

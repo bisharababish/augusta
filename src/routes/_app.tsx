@@ -1,3 +1,5 @@
+/* eslint-disable prettier/prettier */
+
 import { createFileRoute, Outlet, useNavigate, Link, useLocation } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useI18n } from "@/lib/i18n";

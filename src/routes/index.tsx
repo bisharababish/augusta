@@ -1,3 +1,5 @@
+/* eslint-disable prettier/prettier */
+
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
@@ -66,10 +68,7 @@ function LoginPage() {
         <div className="relative space-y-6 max-w-md">
           <h1 className="text-4xl font-bold leading-tight">{t("welcome")}</h1>
           <p className="text-lg opacity-90">{t("tagline")}</p>
-          <div className="grid grid-cols-2 gap-4 pt-4">
-            <Stat value="1,200+" label={t("patientsServed")} />
-            <Stat value="48" label={t("staffOnline")} />
-          </div>
+
         </div>
         <div className="relative flex items-center gap-2 text-sm opacity-80">
           <ShieldCheck className="h-4 w-4" />

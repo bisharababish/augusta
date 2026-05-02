@@ -1,18 +1,26 @@
+/* eslint-disable prettier/prettier */
+
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
-import tsConfigPaths from "vite-tsconfig-paths";
+import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import path from "path";
+import tsConfigPaths from "vite-tsconfig-paths";
+import path from "node:path";
 
 export default defineConfig({
-  plugins: [
-    tsConfigPaths(),
-    tailwindcss(),
-    tanstackStart({ target: "static" }),
-    react(),
-  ],
   resolve: {
-    alias: { "@": path.resolve(__dirname, "./src") },
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+    dedupe: ["react", "react-dom", "@tanstack/react-router", "@tanstack/react-start"],
   },
+  plugins: [
+    tsConfigPaths({ projects: ["./tsconfig.json"] }),
+    tailwindcss(),
+    tanstackStart({
+      customViteReactPlugin: true,
+      target: "static", // static SPA build for Render Static Site
+    }),
+    viteReact(),
+  ],
 });

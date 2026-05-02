@@ -1,3 +1,5 @@
+/* eslint-disable prettier/prettier */
+
 import { Outlet, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { I18nProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";

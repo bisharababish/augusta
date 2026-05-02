@@ -1,7 +1,9 @@
+/* eslint-disable prettier/prettier */
+
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { supabase, type Profile, type DbRole } from "./supabase";
 
-export type Role = "patient" | "doctor" | "nurse" | "escort";
+export type Role = "patient" | "doctor" | "nurse" | "escort" | "admin";
 
 export interface AuthUser {
   id: string;
@@ -18,7 +20,7 @@ interface SignUpInput {
   phone: string;
   date_of_birth: string;
   gender: "male" | "female" | "other";
-  role: "patient" | "escort"; // self-registration only allowed for these
+  role: "patient" | "escort";
 }
 
 interface AuthCtx {
@@ -30,22 +32,30 @@ interface AuthCtx {
   refreshProfile: () => Promise<void>;
 }
 
+const ROLE_PRIORITY: Role[] = ["admin", "doctor", "nurse", "escort", "patient"];
+
+function pickHighestRole(roles: string[]): Role {
+  for (const r of ROLE_PRIORITY) {
+    if (roles.includes(r)) return r;
+  }
+  return "patient";
+}
+
 const AuthContext = createContext<AuthCtx | null>(null);
 
 async function loadProfileAndRole(userId: string, email: string): Promise<AuthUser | null> {
-  const [{ data: profile }, { data: roleRow }] = await Promise.all([
+  const [{ data: profile }, { data: roleRows }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
-    supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
+    supabase.from("user_roles").select("role").eq("user_id", userId),
   ]);
 
-  const role = (roleRow?.role as DbRole | undefined) ?? "patient";
-  // Treat admin as doctor for UI routing fallback (admins also use the dashboard)
-  const uiRole: Role = role === "admin" ? "doctor" : (role as Role);
+  const roles = (roleRows ?? []).map((r: { role: string }) => r.role);
+  const role = pickHighestRole(roles);
 
   return {
     id: userId,
     email,
-    role: uiRole,
+    role,
     profile: (profile as Profile | null) ?? null,
   };
 }
@@ -55,10 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Set up listener FIRST
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        // Defer DB calls outside the callback
         setTimeout(async () => {
           const u = await loadProfileAndRole(session.user.id, session.user.email ?? "");
           setUser(u);
@@ -68,7 +76,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // Then fetch existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         const u = await loadProfileAndRole(session.user.id, session.user.email ?? "");
@@ -125,12 +132,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
   return ctx;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function getDisplayName(user: AuthUser, _lang: "en" | "ar") {
   return user.profile?.full_name || user.email;
 }

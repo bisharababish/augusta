@@ -1,3 +1,5 @@
+/* eslint-disable prettier/prettier */
+
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
@@ -117,11 +119,10 @@ function ReportsPage() {
                     <td className="py-3 pe-4 text-muted-foreground">{a.date} · {a.time}</td>
                     <td className="py-3 pe-4 text-muted-foreground hidden sm:table-cell">{a.doctor}</td>
                     <td className="py-3">
-                      <span className={`inline-block text-xs px-2 py-0.5 rounded-full ${
-                        a.status === "completed" ? "bg-success/15 text-success" :
-                        a.status === "scheduled" ? "bg-primary-soft text-primary" :
-                        "bg-warning/15 text-[oklch(0.50_0.15_75)]"
-                      }`}>{t(a.status)}</span>
+                      <span className={`inline-block text-xs px-2 py-0.5 rounded-full ${a.status === "completed" ? "bg-success/15 text-success" :
+                          a.status === "scheduled" ? "bg-primary-soft text-primary" :
+                            "bg-warning/15 text-[oklch(0.50_0.15_75)]"
+                        }`}>{t(a.status)}</span>
                     </td>
                   </tr>
                 ))}

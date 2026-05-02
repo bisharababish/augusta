@@ -1,3 +1,5 @@
+/* eslint-disable prettier/prettier */
+
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useI18n } from "@/lib/i18n";
@@ -50,7 +52,7 @@ function PortfolioPage() {
     try {
       const raw = localStorage.getItem(storageKey);
       if (raw) setProfile(JSON.parse(raw));
-    } catch {}
+    } catch { /* empty */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 

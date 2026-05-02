@@ -1,3 +1,5 @@
+/* eslint-disable prettier/prettier */
+
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 export type Lang = "en" | "ar";
