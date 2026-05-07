@@ -25,7 +25,8 @@ function AnnouncementsPage() {
   const [form, setForm] = useState({ title: "", body: "" });
   const [submitting, setSubmitting] = useState(false);
 
-  const canPost = user?.role === "doctor" || user?.role === "nurse";
+  // Fix #8 — admin can also post announcements
+  const canPost = user?.role === "doctor" || user?.role === "nurse" || user?.role === "admin";
 
   const reload = async () => {
     setLoading(true);
@@ -44,7 +45,6 @@ function AnnouncementsPage() {
     }
     setSubmitting(true);
     try {
-      // After
       await createAnnouncement({
         title: form.title.trim(),
         body: form.body.trim(),

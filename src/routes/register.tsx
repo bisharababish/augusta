@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { HeartPulse, Globe, Loader2, HeartHandshake, Users } from "lucide-react";
+import { HeartPulse, Globe, Loader2, HeartHandshake, Users, MailCheck } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/register")({
@@ -27,6 +27,8 @@ function RegisterPage() {
   const { signUp } = useAuth();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
+  // Fix #3 — show confirmation notice instead of navigating to dashboard
+  const [done, setDone] = useState(false);
 
   const [form, setForm] = useState({
     role: "patient" as "patient" | "escort",
@@ -39,7 +41,8 @@ function RegisterPage() {
     gender: "male" as "male" | "female" | "other",
   });
 
-  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
+    setForm((f) => ({ ...f, [k]: v }));
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,9 +64,32 @@ function RegisterPage() {
     });
     setBusy(false);
     if (error) return toast.error(error);
-    toast.success(t("signupSuccess"));
-    navigate({ to: "/dashboard" });
+
+    // Fix #3 — show email confirmation screen instead of blind redirect
+    setDone(true);
   };
+
+  // Fix #3 — confirmation screen after signup
+  if (done) {
+    return (
+      <div dir={dir} className="min-h-screen bg-soft flex items-center justify-center px-4">
+        <Card className="w-full max-w-md p-8 shadow-elevated text-center">
+          <div className="mx-auto h-16 w-16 rounded-full bg-primary-soft flex items-center justify-center mb-4">
+            <MailCheck className="h-8 w-8 text-primary" />
+          </div>
+          <h2 className="text-2xl font-bold">{lang === "ar" ? "تحقق من بريدك" : "Check your email"}</h2>
+          <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
+            {lang === "ar"
+              ? `أرسلنا رابط تأكيد إلى ${form.email}. يرجى تأكيد بريدك الإلكتروني قبل تسجيل الدخول.`
+              : `We sent a confirmation link to ${form.email}. Please confirm your email before signing in.`}
+          </p>
+          <Button className="mt-6 w-full" onClick={() => navigate({ to: "/" })}>
+            {t("login")}
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div dir={dir} className="min-h-screen bg-soft py-10 px-4 sm:px-6">
@@ -102,11 +128,10 @@ function RegisterPage() {
                     type="button"
                     key={key}
                     onClick={() => set("role", key)}
-                    className={`flex items-center gap-2 rounded-lg border p-3 text-sm transition-all ${
-                      form.role === key
+                    className={`flex items-center gap-2 rounded-lg border p-3 text-sm transition-all ${form.role === key
                         ? "border-primary bg-primary-soft text-primary font-semibold shadow-soft"
                         : "border-border hover:border-primary/50 hover:bg-muted"
-                    }`}
+                      }`}
                   >
                     <Icon className="h-4 w-4" />
                     {t(key)}

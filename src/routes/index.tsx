@@ -53,7 +53,13 @@ function LoginPage() {
     <div dir={dir} className="min-h-screen grid lg:grid-cols-2 bg-background">
       {/* Hero side */}
       <div className="relative hidden lg:flex flex-col justify-between p-10 bg-hero text-primary-foreground overflow-hidden">
-        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "radial-gradient(circle at 20% 20%, white 0, transparent 40%), radial-gradient(circle at 80% 80%, white 0, transparent 40%)" }} />
+        <div
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 20% 20%, white 0, transparent 40%), radial-gradient(circle at 80% 80%, white 0, transparent 40%)",
+          }}
+        />
         <div className="relative">
           <div className="flex items-center gap-3">
             <div className="h-11 w-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
@@ -68,11 +74,14 @@ function LoginPage() {
         <div className="relative space-y-6 max-w-md">
           <h1 className="text-4xl font-bold leading-tight">{t("welcome")}</h1>
           <p className="text-lg opacity-90">{t("tagline")}</p>
-
         </div>
         <div className="relative flex items-center gap-2 text-sm opacity-80">
           <ShieldCheck className="h-4 w-4" />
-          <span>{lang === "ar" ? "بوابة آمنة لمستشفى المطلع" : "Secure portal — Augusta Victoria"}</span>
+          <span>
+            {lang === "ar"
+              ? "بوابة آمنة لمستشفى المطلع"
+              : "Secure portal — Augusta Victoria"}
+          </span>
         </div>
       </div>
 
@@ -125,7 +134,11 @@ function LoginPage() {
                 />
               </div>
 
-              <Button type="submit" disabled={busy} className="w-full h-11 text-base font-semibold">
+              <Button
+                type="submit"
+                disabled={busy}
+                className="w-full h-11 text-base font-semibold"
+              >
                 {busy && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
                 {t("loginCta")}
               </Button>
@@ -152,15 +165,6 @@ function LoginPage() {
           </Card>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Stat({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="rounded-xl bg-white/10 backdrop-blur border border-white/15 p-4">
-      <div className="text-3xl font-bold">{value}</div>
-      <div className="text-xs opacity-80 mt-1">{label}</div>
     </div>
   );
 }

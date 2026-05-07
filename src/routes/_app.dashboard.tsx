@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n";
 import { useAuth, getDisplayName } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { listAppointments, listAnnouncements, type Appointment, type Announcement, type AppointmentType } from "@/lib/db";
+import { listAppointments, listAnnouncements, countUnreadMessages, type Appointment, type Announcement, type AppointmentType } from "@/lib/db";
 import { CalendarDays, MessageCircle, Megaphone, HeartHandshake, ArrowRight, Activity, Pill, Radiation, Stethoscope, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_app/dashboard")({
@@ -15,7 +15,11 @@ export const Route = createFileRoute("/_app/dashboard")({
 });
 
 const ICONS: Record<AppointmentType, typeof Pill> = {
-  chemotherapy: Pill, radiation: Radiation, clinic: Stethoscope, physioSession: HeartHandshake,
+  chemotherapy: Pill,
+  radiation: Radiation,
+  clinic: Stethoscope,
+  physio: HeartHandshake,
+  physioSession: HeartHandshake,
 };
 
 function Dashboard() {
@@ -23,6 +27,7 @@ function Dashboard() {
   const { user } = useAuth();
   const [appts, setAppts] = useState<Appointment[]>([]);
   const [anns, setAnns] = useState<Announcement[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0); // Fix #9
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,9 +35,16 @@ function Dashboard() {
     let alive = true;
     (async () => {
       try {
-        const [a, n] = await Promise.all([listAppointments(user.id, user.role), listAnnouncements()]);
+        // Fix #9 — fetch real unread count in parallel
+        const [a, n, unread] = await Promise.all([
+          listAppointments(user.id, user.role),
+          listAnnouncements(),
+          countUnreadMessages(user.id),
+        ]);
         if (!alive) return;
-        setAppts(a); setAnns(n);
+        setAppts(a);
+        setAnns(n);
+        setUnreadCount(unread);
       } finally {
         if (alive) setLoading(false);
       }
@@ -42,7 +54,7 @@ function Dashboard() {
 
   if (!user) return null;
 
-  const upcoming = appts.filter((a) => a.status !== "completed").slice(0, 3);
+  const upcoming = appts.filter((a) => a.status !== "completed" && a.status !== "cancelled").slice(0, 3);
   const today = new Date().toISOString().slice(0, 10);
   const todayCount = appts.filter((a) => a.date === today).length;
 
@@ -60,7 +72,8 @@ function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={CalendarDays} label={t("upcoming")} value={upcoming.length.toString()} tone="primary" />
         <StatCard icon={Activity} label={t("todayAppointments")} value={todayCount.toString()} tone="success" />
-        <StatCard icon={MessageCircle} label={t("unreadMessages")} value="0" tone="warning" />
+        {/* Fix #9 — real unread count */}
+        <StatCard icon={MessageCircle} label={t("unreadMessages")} value={unreadCount.toString()} tone="warning" />
         <StatCard icon={Megaphone} label={t("newAnnouncements")} value={anns.length.toString()} tone="primary" />
       </div>
 
@@ -78,14 +91,14 @@ function Dashboard() {
             ) : upcoming.length === 0 ? (
               <div className="text-center py-6 text-sm text-muted-foreground">{t("noAppointments")}</div>
             ) : upcoming.map((a) => {
-              const Icon = ICONS[a.type];
+              const Icon = ICONS[a.type] ?? HeartHandshake;
               return (
                 <div key={a.id} className="flex items-center gap-4 p-3 rounded-lg border border-border hover:border-primary/40 hover:bg-primary-soft/40 transition-all">
                   <div className="h-11 w-11 rounded-lg bg-primary-soft text-primary flex items-center justify-center shrink-0">
                     <Icon className="h-5 w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium">{t(a.type)}</div>
+                    <div className="font-medium">{t(a.type as never)}</div>
                     <div className="text-xs text-muted-foreground">{a.doctor}{a.room ? ` · ${a.room}` : ""}</div>
                   </div>
                   <div className="text-right shrink-0">

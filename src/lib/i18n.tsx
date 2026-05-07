@@ -47,6 +47,7 @@ export const dict: Dict = {
   scheduled: { en: "Scheduled", ar: "مجدول" },
   completed: { en: "Completed", ar: "مكتمل" },
   pending: { en: "Pending", ar: "قيد الانتظار" },
+  cancelled: { en: "Cancelled", ar: "ملغي" },
   send: { en: "Send", ar: "إرسال" },
   typeMessage: { en: "Type a message…", ar: "اكتب رسالة…" },
   title: { en: "Title", ar: "العنوان" },
@@ -58,6 +59,7 @@ export const dict: Dict = {
   contact: { en: "Contact", ar: "التواصل" },
   save: { en: "Save changes", ar: "حفظ التغييرات" },
   saved: { en: "Saved", ar: "تم الحفظ" },
+  saving: { en: "Saving…", ar: "جاري الحفظ…" },
   switchLang: { en: "العربية", ar: "English" },
   searchHospital: { en: "Visit hospital website", ar: "زيارة موقع المستشفى" },
   bookNew: { en: "Book new", ar: "حجز جديد" },
@@ -96,10 +98,13 @@ export const dict: Dict = {
   details: { en: "Details", ar: "التفاصيل" },
   reschedule: { en: "Reschedule", ar: "إعادة جدولة" },
   cancel: { en: "Cancel", ar: "إلغاء" },
+  cancelAppt: { en: "Cancel appointment", ar: "إلغاء الموعد" },
   confirm: { en: "Confirm", ar: "تأكيد" },
   weeklyReport: { en: "Weekly summary", ar: "ملخص أسبوعي" },
   monthlyReport: { en: "Monthly summary", ar: "ملخص شهري" },
   download: { en: "Download report", ar: "تحميل التقرير" },
+  back: { en: "Back", ar: "رجوع" },
+  contacts: { en: "Contacts", ar: "جهات الاتصال" },
 };
 
 interface I18nCtx {

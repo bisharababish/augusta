@@ -2,11 +2,14 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-// Augusta Victoria Hospital — Supabase project
-const SUPABASE_URL = "https://ettcnksmirshaakqxqis.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_8a_IWUoc8kTkc0I4sHPH3g_ZXCF3tGa";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error("Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in environment variables.");
+}
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,

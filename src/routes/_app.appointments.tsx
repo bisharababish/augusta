@@ -7,8 +7,8 @@ import { useAuth } from "@/lib/auth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { listAppointments, createAppointment, type Appointment, type AppointmentType } from "@/lib/db";
-import { Plus, Pill, Radiation, Stethoscope, HeartHandshake, Loader2 } from "lucide-react";
+import { listAppointments, createAppointment, cancelAppointment, type Appointment, type AppointmentType } from "@/lib/db";
+import { Plus, Pill, Radiation, Stethoscope, HeartHandshake, Loader2, X } from "lucide-react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,10 +20,12 @@ export const Route = createFileRoute("/_app/appointments")({
   head: () => ({ meta: [{ title: "Appointments — Augusta Victoria Hospital" }] }),
 });
 
+// Fix #2 — added physio icon mapping to match the DB type
 const ICONS: Record<AppointmentType, typeof Pill> = {
   chemotherapy: Pill,
   radiation: Radiation,
   clinic: Stethoscope,
+  physio: HeartHandshake,
   physioSession: HeartHandshake,
 };
 
@@ -34,6 +36,7 @@ function AppointmentsPage() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [form, setForm] = useState({ type: "clinic" as AppointmentType, date: "", time: "", doctor: "", room: "" });
 
   const reload = async () => {
@@ -78,8 +81,26 @@ function AppointmentsPage() {
     }
   };
 
-  const upcoming = items.filter((i) => i.status !== "completed");
-  const past = items.filter((i) => i.status === "completed");
+  // Fix #6 — cancel appointment handler
+  const handleCancel = async (id: string) => {
+    const confirmed = window.confirm(
+      lang === "ar" ? "هل أنت متأكد من إلغاء هذا الموعد؟" : "Are you sure you want to cancel this appointment?"
+    );
+    if (!confirmed) return;
+    setCancellingId(id);
+    try {
+      await cancelAppointment(id);
+      toast.success(lang === "ar" ? "تم إلغاء الموعد" : "Appointment cancelled");
+      await reload();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
+  const upcoming = items.filter((i) => i.status !== "completed" && i.status !== "cancelled");
+  const past = items.filter((i) => i.status === "completed" || i.status === "cancelled");
 
   return (
     <div className="space-y-6">
@@ -103,6 +124,7 @@ function AppointmentsPage() {
                     <SelectItem value="chemotherapy">{t("chemotherapy")}</SelectItem>
                     <SelectItem value="radiation">{t("radiation")}</SelectItem>
                     <SelectItem value="clinic">{t("clinic")}</SelectItem>
+                    <SelectItem value="physio">{t("physio")}</SelectItem>
                     <SelectItem value="physioSession">{t("physioSession")}</SelectItem>
                   </SelectContent>
                 </Select>
@@ -129,15 +151,45 @@ function AppointmentsPage() {
         <Card className="p-12 text-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin inline" /></Card>
       ) : (
         <>
-          <Section title={t("upcoming")} list={upcoming} lang={lang} t={t} />
-          {past.length > 0 && <Section title={t("completed")} list={past} lang={lang} t={t} muted />}
+          <Section
+            title={t("upcoming")}
+            list={upcoming}
+            t={t}
+            cancellingId={cancellingId}
+            onCancel={handleCancel}
+          />
+          {past.length > 0 && (
+            <Section
+              title={t("completed")}
+              list={past}
+              t={t}
+              muted
+              cancellingId={cancellingId}
+              onCancel={handleCancel}
+            />
+          )}
         </>
       )}
     </div>
   );
 }
 
-function Section({ title, list, lang, t, muted }: { title: string; list: Appointment[]; lang: "en" | "ar"; t: ReturnType<typeof useI18n>["t"]; muted?: boolean }) {
+// Fix #16 — removed dead `lang` prop and hidden span
+function Section({
+  title,
+  list,
+  t,
+  muted,
+  cancellingId,
+  onCancel,
+}: {
+  title: string;
+  list: Appointment[];
+  t: ReturnType<typeof useI18n>["t"];
+  muted?: boolean;
+  cancellingId: string | null;
+  onCancel: (id: string) => void;
+}) {
   return (
     <div>
       <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">{title}</h3>
@@ -147,31 +199,50 @@ function Section({ title, list, lang, t, muted }: { title: string; list: Appoint
         ) : (
           <div className="divide-y divide-border">
             {list.map((a) => {
-              const Icon = ICONS[a.type];
+              const Icon = ICONS[a.type] ?? HeartHandshake;
+              const isCancellable = a.status === "scheduled" || a.status === "pending";
               return (
                 <div key={a.id} className={`flex items-center gap-4 p-4 hover:bg-muted/40 transition-colors ${muted ? "opacity-70" : ""}`}>
                   <div className="h-11 w-11 rounded-lg bg-primary-soft text-primary flex items-center justify-center shrink-0">
                     <Icon className="h-5 w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium">{t(a.type)}</div>
+                    <div className="font-medium">{t(a.type as never)}</div>
                     <div className="text-xs text-muted-foreground">{a.doctor}{a.room ? ` · ${a.room}` : ""}</div>
                   </div>
                   <div className="hidden sm:block text-right">
                     <div className="text-sm font-semibold">{a.date}</div>
                     <div className="text-xs text-muted-foreground">{a.time}</div>
                   </div>
-                  <Badge variant={a.status === "scheduled" ? "default" : a.status === "completed" ? "secondary" : "outline"}>
+                  <Badge variant={
+                    a.status === "scheduled" ? "default" :
+                      a.status === "completed" ? "secondary" :
+                        a.status === "cancelled" ? "destructive" : "outline"
+                  }>
                     {t(a.status)}
                   </Badge>
+                  {/* Fix #6 — cancel button for active appointments */}
+                  {isCancellable && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-destructive shrink-0"
+                      onClick={() => onCancel(a.id)}
+                      disabled={cancellingId === a.id}
+                      title={t("cancelAppt")}
+                    >
+                      {cancellingId === a.id
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <X className="h-4 w-4" />
+                      }
+                    </Button>
+                  )}
                 </div>
               );
             })}
           </div>
         )}
       </Card>
-      {/* lang reserved for future localized fields */}
-      <span className="hidden">{lang}</span>
     </div>
   );
 }

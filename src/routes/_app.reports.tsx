@@ -30,26 +30,35 @@ function ReportsPage() {
     })();
   }, [user]);
 
-  const counts = appts.reduce<Record<string, number>>((acc, a) => { acc[a.type] = (acc[a.type] ?? 0) + 1; return acc; }, {});
+  const counts = appts.reduce<Record<string, number>>((acc, a) => {
+    acc[a.type] = (acc[a.type] ?? 0) + 1;
+    return acc;
+  }, {});
   const total = appts.length;
   const completed = appts.filter((a) => a.status === "completed").length;
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
+  // Fix — added 'physio' entry so physio appointments don't crash the breakdown
   const breakdown: { key: AppointmentType; icon: typeof Pill; count: number }[] = [
     { key: "chemotherapy", icon: Pill, count: counts.chemotherapy ?? 0 },
     { key: "radiation", icon: Radiation, count: counts.radiation ?? 0 },
     { key: "clinic", icon: Stethoscope, count: counts.clinic ?? 0 },
+    { key: "physio", icon: HeartHandshake, count: counts.physio ?? 0 },
     { key: "physioSession", icon: HeartHandshake, count: counts.physioSession ?? 0 },
   ];
   const max = Math.max(...breakdown.map((b) => b.count), 1);
 
   const download = () => {
     const header = "type,date,time,doctor,room,status\n";
-    const rows = appts.map((a) => `${a.type},${a.date},${a.time},"${a.doctor}","${a.room ?? ""}",${a.status}`).join("\n");
+    const rows = appts
+      .map((a) => `${a.type},${a.date},${a.time},"${a.doctor ?? ""}","${a.room ?? ""}",${a.status}`)
+      .join("\n");
     const blob = new Blob([header + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = url; link.download = "avh-report.csv"; link.click();
+    link.href = url;
+    link.download = "avh-report.csv";
+    link.click();
     URL.revokeObjectURL(url);
     toast.success(lang === "ar" ? "تم تنزيل التقرير" : "Report downloaded");
   };
@@ -69,28 +78,38 @@ function ReportsPage() {
         <Card className="p-5 shadow-soft">
           <div className="text-xs text-muted-foreground">{t("completed")}</div>
           <div className="text-3xl font-bold mt-1">{completed}</div>
-          <div className="text-xs text-success mt-1 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> {completionRate}%</div>
+          <div className="text-xs text-success mt-1 flex items-center gap-1">
+            <TrendingUp className="h-3 w-3" /> {completionRate}%
+          </div>
         </Card>
         <Card className="p-5 shadow-soft bg-primary-soft border-primary/20">
           <div className="text-xs text-primary font-semibold">{t("download")}</div>
           <p className="text-sm text-muted-foreground mt-1 mb-3">CSV export</p>
-          <Button onClick={download} size="sm" className="w-full" disabled={total === 0}><Download className="h-4 w-4 me-2" />CSV</Button>
+          <Button onClick={download} size="sm" className="w-full" disabled={total === 0}>
+            <Download className="h-4 w-4 me-2" />CSV
+          </Button>
         </Card>
       </div>
 
       <Card className="p-6 shadow-soft">
-        <h3 className="font-semibold text-lg mb-5">{lang === "ar" ? "توزيع العلاجات" : "Treatment breakdown"}</h3>
+        <h3 className="font-semibold text-lg mb-5">
+          {lang === "ar" ? "توزيع العلاجات" : "Treatment breakdown"}
+        </h3>
         <div className="space-y-4">
           {breakdown.map((b) => (
             <div key={b.key}>
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2 text-sm font-medium">
-                  <b.icon className="h-4 w-4 text-primary" /> {t(b.key)}
+                  <b.icon className="h-4 w-4 text-primary" />
+                  {t(b.key as never)}
                 </div>
                 <span className="text-sm text-muted-foreground">{b.count}</span>
               </div>
               <div className="h-2 rounded-full bg-muted overflow-hidden">
-                <div className="h-full bg-hero rounded-full transition-all" style={{ width: `${(b.count / max) * 100}%` }} />
+                <div
+                  className="h-full bg-hero rounded-full transition-all"
+                  style={{ width: `${(b.count / max) * 100}%` }}
+                />
               </div>
             </div>
           ))}
@@ -115,14 +134,17 @@ function ReportsPage() {
               <tbody className="divide-y divide-border">
                 {appts.map((a) => (
                   <tr key={a.id} className="hover:bg-muted/40">
-                    <td className="py-3 pe-4">{t(a.type)}</td>
+                    <td className="py-3 pe-4">{t(a.type as never)}</td>
                     <td className="py-3 pe-4 text-muted-foreground">{a.date} · {a.time}</td>
                     <td className="py-3 pe-4 text-muted-foreground hidden sm:table-cell">{a.doctor}</td>
                     <td className="py-3">
                       <span className={`inline-block text-xs px-2 py-0.5 rounded-full ${a.status === "completed" ? "bg-success/15 text-success" :
                           a.status === "scheduled" ? "bg-primary-soft text-primary" :
-                            "bg-warning/15 text-[oklch(0.50_0.15_75)]"
-                        }`}>{t(a.status)}</span>
+                            a.status === "cancelled" ? "bg-destructive/15 text-destructive" :
+                              "bg-warning/15 text-[oklch(0.50_0.15_75)]"
+                        }`}>
+                        {t(a.status)}
+                      </span>
                     </td>
                   </tr>
                 ))}

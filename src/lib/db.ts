@@ -3,7 +3,8 @@
 
 import { supabase } from "./supabase";
 
-export type AppointmentType = "chemotherapy" | "radiation" | "clinic" | "physioSession";
+// Fix #2 — added 'physio' which exists in the DB CHECK constraint but was missing from the type
+export type AppointmentType = "chemotherapy" | "radiation" | "clinic" | "physio" | "physioSession";
 export type AppointmentStatus = "scheduled" | "completed" | "pending" | "cancelled";
 
 export interface Appointment {
@@ -28,12 +29,12 @@ export interface Announcement {
 }
 
 export interface Message {
-   id: string;
-  sender_id: string;
-  recipient_id: string;
-  receiver_id?: string;
-  body: string;
-  created_at: string;
+    id: string;
+    sender_id: string;
+    recipient_id: string;
+    receiver_id?: string;
+    body: string;
+    created_at: string;
 }
 
 export interface StaffProfile {
@@ -102,6 +103,15 @@ export async function createAppointment(input: {
     };
 }
 
+// Fix #6 — Cancel appointment (Update: sets status to 'cancelled')
+export async function cancelAppointment(id: string): Promise<void> {
+    const { error } = await supabase
+        .from("appointments")
+        .update({ status: "cancelled" })
+        .eq("id", id);
+    if (error) throw new Error(error.message);
+}
+
 // ── Announcements ─────────────────────────────────────────────────────────────
 
 export async function listAnnouncements(): Promise<Announcement[]> {
@@ -120,33 +130,7 @@ export async function listAnnouncements(): Promise<Announcement[]> {
         author_name: row.profiles?.full_name ?? "Staff",
     }));
 }
-export async function listPatients(): Promise<StaffProfile[]> {
-    const { data, error } = await supabase
-        .from("user_roles")
-        .select("user_id, role, profiles!user_roles_user_id_profiles_fkey(id, full_name)")
-        .eq("role", "patient");
 
-    if (error) throw new Error(error.message);
-
-    // Filter out anyone who is ALSO a doctor/nurse/admin in JS
-    const { data: staffData } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .in("role", ["doctor", "nurse", "admin"]);
-
-    const staffSet = new Set((staffData ?? []).map((r: any) => r.user_id as string));
-
-    return (data ?? [])
-        .filter((row: any) => !staffSet.has(row.user_id))
-        .map((row: any) => {
-            const p = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-            return {
-                id: row.user_id,
-                full_name: p?.full_name ?? "Patient",
-                role: row.role,
-            };
-        });
-}
 export async function createAnnouncement(input: {
     title: string;
     body: string;
@@ -211,7 +195,32 @@ export async function sendMessage(input: {
     };
 }
 
-// ── Staff lookup ──────────────────────────────────────────────────────────────
+// Fix #9 — Count unread messages so dashboard shows real data instead of hardcoded 0
+export async function countUnreadMessages(userId: string): Promise<number> {
+    const { count, error } = await supabase
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("recipient_id", userId)
+        .is("read_at", null);
+    if (error) return 0;
+    return count ?? 0;
+}
+
+// ── Profiles ──────────────────────────────────────────────────────────────────
+
+// Fix #7 — Save profile fields that exist in the DB (full_name and phone only)
+export async function updateProfile(
+    id: string,
+    updates: { full_name?: string; phone?: string }
+): Promise<void> {
+    const { error } = await supabase
+        .from("profiles")
+        .update(updates)
+        .eq("id", id);
+    if (error) throw new Error(error.message);
+}
+
+// ── Staff / Patient lookup ────────────────────────────────────────────────────
 
 export async function listStaff(): Promise<StaffProfile[]> {
     const { data, error } = await supabase
@@ -228,4 +237,31 @@ export async function listStaff(): Promise<StaffProfile[]> {
             role: row.role,
         };
     });
+}
+
+export async function listPatients(): Promise<StaffProfile[]> {
+    const { data, error } = await supabase
+        .from("user_roles")
+        .select("user_id, role, profiles!user_roles_user_id_profiles_fkey(id, full_name)")
+        .eq("role", "patient");
+
+    if (error) throw new Error(error.message);
+
+    const { data: staffData } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .in("role", ["doctor", "nurse", "admin"]);
+
+    const staffSet = new Set((staffData ?? []).map((r: any) => r.user_id as string));
+
+    return (data ?? [])
+        .filter((row: any) => !staffSet.has(row.user_id))
+        .map((row: any) => {
+            const p = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+            return {
+                id: row.user_id,
+                full_name: p?.full_name ?? "Patient",
+                role: row.role,
+            };
+        });
 }

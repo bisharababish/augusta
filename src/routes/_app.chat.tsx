@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { listMessages, sendMessage, listStaff, listPatients, type Message, type StaffProfile } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
-import { Send, Stethoscope, User, Loader2 } from "lucide-react";
+import { Send, Stethoscope, User, Loader2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/chat")({
@@ -26,11 +26,12 @@ function ChatPage() {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  // Fix #5 — track which panel is visible on mobile
+  const [showChat, setShowChat] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   const isStaff = user?.role === "doctor" || user?.role === "nurse" || user?.role === "admin";
 
-  // Load contacts + messages
   useEffect(() => {
     if (!user) return;
     (async () => {
@@ -50,47 +51,29 @@ function ChatPage() {
     })();
   }, [user]);
 
-  // Realtime subscription
   useEffect(() => {
     if (!user) return;
-
     const channel = supabase
       .channel(`messages-${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-        },
-        (payload) => {
-          const msg = payload.new as Message;
-          // Only add if it involves the current user
-          // In realtime subscription
-          if (msg.sender_id === user.id || msg.recipient_id === user.id || msg.receiver_id === user.id) {
-            setAllMessages((prev) => {
-              // Avoid duplicates
-              if (prev.find((m) => m.id === msg.id)) return prev;
-              return [...prev, msg];
-            });
-          }
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
+        const msg = payload.new as Message;
+        if (msg.sender_id === user.id || msg.recipient_id === user.id || msg.receiver_id === user.id) {
+          setAllMessages((prev) => {
+            if (prev.find((m) => m.id === msg.id)) return prev;
+            return [...prev, msg];
+          });
         }
-      )
+      })
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  // Scroll to bottom on new message
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [allMessages.length]);
 
   const conversation = useMemo(() => {
     if (!user || !activeId) return [];
-    // In conversation useMemo
     return allMessages.filter(
       (m) =>
         (m.sender_id === user.id && m.recipient_id === activeId) ||
@@ -118,6 +101,12 @@ function ChatPage() {
     }
   };
 
+  // Fix #5 — pick a contact and show chat panel on mobile
+  const selectContact = (id: string) => {
+    setActiveId(id);
+    setShowChat(true);
+  };
+
   const active = contacts.find((s) => s.id === activeId);
 
   if (loading) {
@@ -137,9 +126,11 @@ function ChatPage() {
   }
 
   return (
+    // Fix #5 — on mobile, show only one panel at a time
     <div className="grid lg:grid-cols-[280px_1fr] gap-4 h-[calc(100vh-9rem)]">
-      {/* Sidebar */}
-      <Card className="p-3 shadow-soft overflow-y-auto">
+
+      {/* Contact sidebar — hidden on mobile when chat is open */}
+      <Card className={`p-3 shadow-soft overflow-y-auto ${showChat ? "hidden lg:block" : "block"}`}>
         <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 mb-2">
           {isStaff ? "Patients" : t("chat")}
         </h3>
@@ -147,7 +138,7 @@ function ChatPage() {
           {contacts.map((s) => (
             <button
               key={s.id}
-              onClick={() => setActiveId(s.id)}
+              onClick={() => selectContact(s.id)}
               className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors text-left ${activeId === s.id
                 ? "bg-primary-soft text-primary border-primary/20"
                 : "border-transparent hover:bg-muted/50"
@@ -165,9 +156,18 @@ function ChatPage() {
         </div>
       </Card>
 
-      {/* Chat area */}
-      <Card className="flex flex-col shadow-soft overflow-hidden">
+      {/* Chat area — hidden on mobile when contact list is shown */}
+      <Card className={`flex flex-col shadow-soft overflow-hidden ${!showChat ? "hidden lg:flex" : "flex"}`}>
         <div className="flex items-center gap-3 p-4 border-b border-border bg-background/50">
+          {/* Fix #5 — back button on mobile to return to contact list */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            onClick={() => setShowChat(false)}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
           <div className="h-10 w-10 rounded-full bg-primary-soft text-primary flex items-center justify-center">
             {isStaff ? <User className="h-5 w-5" /> : <Stethoscope className="h-5 w-5" />}
           </div>
@@ -181,27 +181,20 @@ function ChatPage() {
         <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-soft">
           {conversation.length === 0 ? (
             <div className="text-center text-sm text-muted-foreground py-8">
-              No conversations yet
+              {t("noMessages")}
             </div>
           ) : (
             conversation.map((m) => {
               const mine = m.sender_id === user?.id;
-              const time = new Date(m.created_at).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              });
+              const time = new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
               return (
                 <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm shadow-soft ${mine
-                      ? "bg-primary text-primary-foreground rounded-br-sm"
-                      : "bg-card border border-border rounded-bl-sm"
-                      }`}
-                  >
+                  <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm shadow-soft ${mine
+                    ? "bg-primary text-primary-foreground rounded-br-sm"
+                    : "bg-card border border-border rounded-bl-sm"
+                    }`}>
                     <div className="whitespace-pre-wrap">{m.body}</div>
-                    <div className={`text-[10px] mt-1 ${mine ? "opacity-80" : "text-muted-foreground"}`}>
-                      {time}
-                    </div>
+                    <div className={`text-[10px] mt-1 ${mine ? "opacity-80" : "text-muted-foreground"}`}>{time}</div>
                   </div>
                 </div>
               );
@@ -210,10 +203,7 @@ function ChatPage() {
           <div ref={endRef} />
         </div>
 
-        <form
-          onSubmit={send}
-          className="flex items-center gap-2 p-3 border-t border-border bg-background"
-        >
+        <form onSubmit={send} className="flex items-center gap-2 p-3 border-t border-border bg-background">
           <Input
             value={text}
             onChange={(e) => setText(e.target.value)}
