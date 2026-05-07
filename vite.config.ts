@@ -17,10 +17,7 @@ export default defineConfig({
   plugins: [
     tsConfigPaths({ projects: ["./tsconfig.json"] }),
     tailwindcss(),
-    tanstackStart({
-      customViteReactPlugin: true,
-      target: "static", // static SPA build for Render Static Site
-    }),
+    tanstackStart(),
     viteReact(),
   ],
 });
