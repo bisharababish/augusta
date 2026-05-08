@@ -22,12 +22,24 @@ const MIME = {
 const serverModule = await import("./dist/server/server.js");
 const serverEntry = serverModule.default;
 
+function toSafeRequestUrl(rawUrl) {
+  const base = `http://localhost:${PORT}`;
+  try {
+    // Handles normal relative URLs and absolute proxy URLs.
+    return new URL(rawUrl || "/", base).toString();
+  } catch {
+    // Prevent runtime crashes on malformed probe URLs.
+    return `${base}/`;
+  }
+}
+
 const server = createServer(async (req, res) => {
   const url = req.url || "/";
 
   // Serve static client assets
   if (url.startsWith("/assets/")) {
-    const filePath = join(__dirname, "dist/client", url);
+    const relativeAssetPath = url.replace(/^\/+/, "");
+    const filePath = join(__dirname, "dist/client", relativeAssetPath);
     if (existsSync(filePath)) {
       const ext = extname(filePath);
       const mime = MIME[ext] || "application/octet-stream";
@@ -38,7 +50,7 @@ const server = createServer(async (req, res) => {
   }
 
   try {
-    const request = new Request(`http://localhost:${PORT}${url}`, {
+    const request = new Request(toSafeRequestUrl(url), {
       method: req.method,
       headers: Object.fromEntries(
         Object.entries(req.headers).filter(([, v]) => v !== undefined)
