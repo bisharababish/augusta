@@ -19,8 +19,8 @@ const MIME = {
   ".woff2": "font/woff2",
 };
 
-const { createServerEntry } = await import("./dist/server/server.js");
-const handler = await createServerEntry();
+const serverModule = await import("./dist/server/server.js");
+const serverEntry = serverModule.default;
 
 const server = createServer(async (req, res) => {
   const url = req.url || "/";
@@ -45,7 +45,7 @@ const server = createServer(async (req, res) => {
       ),
     });
 
-    const response = await handler(request);
+    const response = await serverEntry.fetch(request);
 
     res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
     const body = await response.arrayBuffer();
