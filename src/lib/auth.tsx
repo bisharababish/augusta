@@ -26,7 +26,7 @@ interface SignUpInput {
 interface AuthCtx {
   user: AuthUser | null;
   ready: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (identifier: string, password: string) => Promise<{ error: string | null }>;
   signUp: (input: SignUpInput) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -87,8 +87,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const signIn: AuthCtx["signIn"] = async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const signIn: AuthCtx["signIn"] = async (identifier, password) => {
+    const cleaned = identifier.trim();
+    if (!cleaned || !password) return { error: "Invalid ID number or password" };
+
+    let emailToUse = cleaned;
+
+    // Support true ID login by resolving id_number -> auth email via secure RPC.
+    if (!cleaned.includes("@")) {
+      const { data: resolvedEmail, error: resolveError } = await supabase.rpc("get_email_by_id_number", {
+        p_id_number: cleaned,
+      });
+
+      if (resolveError) {
+        return {
+          error: "ID login is not configured yet. Please run the SQL function setup and try again.",
+        };
+      }
+
+      if (!resolvedEmail || typeof resolvedEmail !== "string") {
+        return { error: "Invalid ID number or password" };
+      }
+
+      emailToUse = resolvedEmail;
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({ email: emailToUse, password });
     return { error: error?.message ?? null };
   };
 

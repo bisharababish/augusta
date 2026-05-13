@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { HeartPulse, Globe, Loader2, HeartHandshake, Users, MailCheck } from "lucide-react";
+import logo from "@/assets/LOGO.jpeg";
+import { Globe, Loader2, HeartHandshake, Users, MailCheck } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/register")({
@@ -96,9 +97,7 @@ function RegisterPage() {
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <Link to="/" className="flex items-center gap-2">
-            <div className="h-10 w-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center">
-              <HeartPulse className="h-5 w-5" />
-            </div>
+            <img src={logo} alt="Augusta Victoria Hospital logo" className="h-12 w-auto object-contain" />
             <div className="leading-tight">
               <div className="font-bold text-sm">Augusta Victoria</div>
               <div className="text-xs text-muted-foreground">{lang === "ar" ? "المطلع" : "Hospital"}</div>

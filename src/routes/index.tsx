@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { HeartPulse, Globe, ShieldCheck, ExternalLink, Loader2 } from "lucide-react";
+import logo from "@/assets/LOGO.jpeg";
+import { Globe, ShieldCheck, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -25,7 +26,7 @@ function LoginPage() {
   const { t, lang, setLang, dir } = useI18n();
   const { signIn, user, ready } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -35,12 +36,12 @@ function LoginPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || password.length < 6) {
+    if (loginId.trim().length < 4 || password.length < 6) {
       toast.error(t("loginFailed"));
       return;
     }
     setBusy(true);
-    const { error } = await signIn(email.trim(), password);
+    const { error } = await signIn(loginId.trim(), password);
     setBusy(false);
     if (error) {
       toast.error(error);
@@ -52,30 +53,29 @@ function LoginPage() {
   return (
     <div dir={dir} className="min-h-screen grid lg:grid-cols-2 bg-background">
       {/* Hero side */}
-      <div className="relative hidden lg:flex flex-col justify-between p-10 bg-hero text-primary-foreground overflow-hidden">
+      <div className="relative hidden lg:flex flex-col justify-between p-10 bg-muted text-foreground overflow-hidden">
         <div
           className="absolute inset-0 opacity-20"
           style={{
-            backgroundImage:
-              "radial-gradient(circle at 20% 20%, white 0, transparent 40%), radial-gradient(circle at 80% 80%, white 0, transparent 40%)",
+            backgroundImage: `url(${logo})`,
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center",
+            backgroundSize: "72%",
           }}
         />
         <div className="relative">
           <div className="flex items-center gap-3">
-            <div className="h-11 w-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
-              <HeartPulse className="h-6 w-6" />
-            </div>
             <div>
               <div className="font-bold text-lg leading-tight">Augusta Victoria Hospital</div>
-              <div className="text-sm opacity-80">مستشفى المطلع</div>
+              <div className="text-sm opacity-70">مستشفى المطلع</div>
             </div>
           </div>
         </div>
-        <div className="relative space-y-6 max-w-md">
+        <div className="relative space-y-6 max-w-md mt-26">
           <h1 className="text-4xl font-bold leading-tight">{t("welcome")}</h1>
-          <p className="text-lg opacity-90">{t("tagline")}</p>
+          <p className="text-lg opacity-80">{t("tagline")}</p>
         </div>
-        <div className="relative flex items-center gap-2 text-sm opacity-80">
+        <div className="relative flex items-center gap-2 text-sm opacity-70">
           <ShieldCheck className="h-4 w-4" />
           <span>
             {lang === "ar"
@@ -89,9 +89,7 @@ function LoginPage() {
       <div className="flex flex-col p-6 sm:p-10">
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 lg:hidden">
-            <div className="h-9 w-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center">
-              <HeartPulse className="h-5 w-5" />
-            </div>
+            <img src={logo} alt="Augusta Victoria Hospital logo" className="h-12 w-auto object-contain" />
             <span className="font-semibold">Augusta Victoria</span>
           </Link>
           <Button variant="ghost" size="sm" onClick={() => setLang(lang === "en" ? "ar" : "en")}>
@@ -109,14 +107,15 @@ function LoginPage() {
 
             <form onSubmit={onSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="email">{t("email")}</Label>
+                <Label htmlFor="login-id">{t("idNumber")}</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder={t("enterEmail")}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="login-id"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="username"
+                  placeholder={t("enterId")}
+                  value={loginId}
+                  onChange={(e) => setLoginId(e.target.value)}
                   className="h-11"
                 />
               </div>
